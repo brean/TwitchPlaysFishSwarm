@@ -126,8 +126,10 @@ public class TwitchIRC : MonoBehaviour
     }
     void OnEnable()
     {
+        //return;
         stopThreads = false;
         StartIRC();
+        
     }
     void OnDisable()
     {

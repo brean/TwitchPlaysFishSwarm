@@ -3,14 +3,57 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class GameLogic : MonoBehaviour {
-    NextDirection direction = NextDirection.Forward;
+class Biotope
+{
+    public Biotope(GameObject phValueGO)
+    {
+        this.phValueGO = phValueGO;
+    }
 
-    [Tooltip("reset timer every X seconds (default: 30)")]
+    public GameObject phValueGO;
+    float phValue = 0.0f;
+    // boost phValue (e.g. fish farm)
+    float phValueBoost = 0.0f;
+
+    public float PhValue
+    {
+        get
+        {
+            return phValue;
+        }
+    }
+
+    public void calculateNewPhValue()
+    {
+        phValue = Random.Range(-2.0f, 2.0f);
+        phValue = (PhValue < 0) ? PhValue - phValueBoost : PhValue + phValueBoost;
+        phValue = Mathf.Min(Mathf.Max(PhValue, -2.5f), 2.5f);
+        
+        foreach (Transform child in phValueGO.transform)
+        {
+            if (child.gameObject.name == "Slider")
+            {
+                Vector3 pos = child.gameObject.transform.localPosition;
+                pos.x = PhValue;
+                child.gameObject.transform.localPosition = pos;
+                break;
+            }
+        }
+        
+    }
+}
+
+public class GameLogic : MonoBehaviour {
+    public Direction direction = Direction.Forward;
+
+    [Tooltip("Reset timer every X seconds (default: 30)")]
     public float resetAfter = 120;
 
-    [Tooltip("text that will be set from current time (e.g. 1:23 if you have 83 seconds left)")]
+    [Tooltip("Text that will be set from current time (e.g. 1:23 if you have 83 seconds left)")]
     public Text text;
+
+    [Tooltip("Offline Mode - Use Keyboard input instead of twitch")]
+    public bool offlineMode = false;
 
     private int lastTime;
 
@@ -22,13 +65,36 @@ public class GameLogic : MonoBehaviour {
     public GameObject arrowForward;
     public GameObject arrowRight;
 
+    public GameObject phValueLeft;
+    public GameObject phValueForward;
+    public GameObject phValueRight;
+
     public GameObject camRails;
+
+    public SwarmLogic swarmLogic;
+
+    Dictionary<Direction, Biotope> biotopes;
 
     // Use this for initialization
     void Start () {
         lastReset = Time.realtimeSinceStartup + resetAfter;
         arrowLeft.SetActive(false);
         arrowRight.SetActive(false);
+
+        biotopes = new Dictionary<Direction, Biotope>();
+        biotopes.Add(Direction.Left, new Biotope(phValueLeft));
+        biotopes.Add(Direction.Right, new Biotope(phValueRight));
+        biotopes.Add(Direction.Forward, new Biotope(phValueForward));
+
+        ResetGL();
+    }
+
+    private void ResetGL()
+    {
+        foreach (KeyValuePair<Direction, Biotope> bio in biotopes)
+        {
+            bio.Value.calculateNewPhValue();
+        }
     }
 
     void TimeIsUp()
@@ -40,10 +106,29 @@ public class GameLogic : MonoBehaviour {
 
         Animation ani = camRails.GetComponent<Animation>();
         ani.Play("animate_"+direction.ToString().ToLower());
+
     }
 
     public void MoveAnimationDone()
     {
+        // update based on current state - kill/spawn fish based on ph-level
+        float newFish = -Mathf.Sin(biotopes[direction].PhValue * Mathf.PI)*10;
+        Debug.Log(newFish);
+        if (newFish > 0)
+        {
+            for (int i = 0; i < newFish; i++)
+            {
+                swarmLogic.addFish();
+            }
+        } else
+        {
+            for (int i = 0; i < -newFish; i++)
+            {
+                swarmLogic.removeFish();
+            }
+        }
+
+        // reset animation for next choice
         Animation ani = camRails.GetComponent<Animation>();
         ani.Rewind();
         ani.Stop();
@@ -52,6 +137,8 @@ public class GameLogic : MonoBehaviour {
         UpdateArrowAnimation();
         pauseTimer = false;
         lastReset = Time.realtimeSinceStartup + resetAfter;
+
+        ResetGL();
     }
 
     void RestartArrowAnimation(GameObject arrow)
@@ -69,13 +156,13 @@ public class GameLogic : MonoBehaviour {
         arrowRight.SetActive(false);
         switch (direction)
         {
-            case NextDirection.Left:
+            case Direction.Left:
                 RestartArrowAnimation(arrowLeft);
                 break;
-            case NextDirection.Forward:
+            case Direction.Forward:
                 RestartArrowAnimation(arrowForward);
                 break;
-            case NextDirection.Right:
+            case Direction.Right:
                 RestartArrowAnimation(arrowRight);
                 break;
         }
@@ -83,7 +170,17 @@ public class GameLogic : MonoBehaviour {
 
     void updateText()
     {
-        if (text != null)
+        if (text == null)
+        {
+            return;
+        }
+
+        if (lastTime < 0)
+        {
+            text.text = "0:00";
+            return;
+        }
+        else 
         {
             int secs = (lastTime % 60);
             string seconds = (secs < 10) ? "0" + secs : secs.ToString();
@@ -98,20 +195,23 @@ public class GameLogic : MonoBehaviour {
             return;
         }
 
-        if (Input.GetAxis("Horizontal") > 0)
+        if (offlineMode)
         {
-            direction = NextDirection.Right;
-            UpdateArrowAnimation();
-        }
-        else if (Input.GetAxis("Horizontal") < 0)
-        {
-            direction = NextDirection.Left;
-            UpdateArrowAnimation();
-        }
-        else if (Input.GetAxis("Vertical") > 0)
-        {
-            direction = NextDirection.Forward;
-            UpdateArrowAnimation();
+            if (Input.GetAxis("Horizontal") > 0)
+            {
+                direction = Direction.Right;
+                UpdateArrowAnimation();
+            }
+            else if (Input.GetAxis("Horizontal") < 0)
+            {
+                direction = Direction.Left;
+                UpdateArrowAnimation();
+            }
+            else if (Input.GetAxis("Vertical") > 0)
+            {
+                direction = Direction.Forward;
+                UpdateArrowAnimation();
+            }
         }
 
         float countDown = lastReset - Time.realtimeSinceStartup;
@@ -127,7 +227,7 @@ public class GameLogic : MonoBehaviour {
     }
 }
 
-enum NextDirection
+public enum Direction
 {
     Left,
     Forward,
