@@ -5,15 +5,15 @@ using UnityEngine.UI;
 
 class Biotope
 {
+    // TODO: refactor - merge with Biotope instances/BiotopeSettings
     public Biotope(GameObject phValueGO)
     {
         this.phValueGO = phValueGO;
     }
 
+    public GameObject biotopeGO;
     public GameObject phValueGO;
     float phValue = 0.0f;
-    // boost phValue (e.g. fish farm)
-    float phValueBoost = 0.0f;
 
     public float PhValue
     {
@@ -25,8 +25,10 @@ class Biotope
 
     public void calculateNewPhValue()
     {
+        BiotopeSettings settings = biotopeGO.GetComponent<BiotopeSettings>();
+
         phValue = Random.Range(-2.0f, 2.0f);
-        phValue = (PhValue < 0) ? PhValue - phValueBoost : PhValue + phValueBoost;
+        phValue = (PhValue < 0) ? PhValue - settings.phBoost : PhValue + settings.phBoost;
         phValue = Mathf.Min(Mathf.Max(PhValue, -2.5f), 2.5f);
         
         foreach (Transform child in phValueGO.transform)
@@ -44,7 +46,10 @@ class Biotope
 }
 
 public class GameLogic : MonoBehaviour {
+
     public Direction direction = Direction.Forward;
+
+    public BiotopeManager biotopeManager;
 
     [Tooltip("Reset timer every X seconds (default: 30)")]
     public float resetAfter = 120;
@@ -73,6 +78,8 @@ public class GameLogic : MonoBehaviour {
 
     public SwarmLogic swarmLogic;
 
+    public TwitchBot bot;
+
     Dictionary<Direction, Biotope> biotopes;
 
     // Use this for initialization
@@ -91,14 +98,55 @@ public class GameLogic : MonoBehaviour {
 
     private void ResetGL()
     {
-        foreach (KeyValuePair<Direction, Biotope> bio in biotopes)
+        List<GameObject> biotopes = new List<GameObject>(biotopeManager.biotopes);
+        
+        foreach (GameObject bioGO in biotopeManager.biotopes)
         {
-            bio.Value.calculateNewPhValue();
+            if (bioGO != null)
+            {
+                bioGO.SetActive(false);
+            }
         }
+
+        GameObject biotopeGO = getNextBiotopeGO(biotopes, new Vector3(-6, 0, 4), 0);
+        this.biotopes[Direction.Left].biotopeGO = biotopeGO;
+
+        biotopeGO = getNextBiotopeGO(biotopes, new Vector3(0, 0, 8), 60);
+        this.biotopes[Direction.Forward].biotopeGO = biotopeGO;
+
+        biotopeGO = getNextBiotopeGO(biotopes, new Vector3(6, 0, 4), 120);
+        this.biotopes[Direction.Right].biotopeGO = biotopeGO;
+
+        // show biotopes for the new starting round
+        foreach (Biotope bio in this.biotopes.Values)
+        {
+            if (bio.biotopeGO != null)
+            {
+                bio.biotopeGO.SetActive(true);
+            }
+        }
+
+        // create new biotope ph-values
+
+        foreach (Biotope bio in this.biotopes.Values)
+        {
+            bio.calculateNewPhValue();
+        }
+    }
+
+    GameObject getNextBiotopeGO(List<GameObject> biotopes, Vector3 pos, float angle)
+    {
+        GameObject biotopeGO = biotopeManager.getRandomBiotope(biotopes);
+        biotopeGO.transform.parent = gameObject.transform.parent;
+        biotopeManager.RotateBiotope(biotopeGO, angle);
+        biotopeGO.transform.position = pos;
+        return biotopeGO;
     }
 
     void TimeIsUp()
     {
+        //TODO: show and fade out last
+
         pauseTimer = true;
         arrowLeft.SetActive(false);
         arrowForward.SetActive(false);
@@ -111,9 +159,23 @@ public class GameLogic : MonoBehaviour {
 
     public void MoveAnimationDone()
     {
+        bot.ResetRound();
         // update based on current state - kill/spawn fish based on ph-level
-        float newFish = -Mathf.Sin(biotopes[direction].PhValue * Mathf.PI)*10;
-        Debug.Log(newFish);
+        Debug.Log(biotopes[direction].PhValue);
+        float newFish = Mathf.Cos((biotopes[direction].PhValue / 2.5f) * Mathf.PI);
+
+        BiotopeSettings settings = biotopes[direction].biotopeGO.GetComponent<BiotopeSettings>();
+
+        newFish -= settings.killFish;
+
+        newFish = Mathf.Max(newFish, -0.9f);
+        newFish = Mathf.Min(newFish, 0.9f);
+        
+        
+        newFish *= swarmLogic.allFish.Count;
+        newFish = Mathf.Min(newFish, 100f);
+        
+        // Debug.Log((biotopes[direction].PhValue) + " --> " + (biotopes[direction].PhValue / 2.5f) + " --> " + (int)newFish);
         if (newFish > 0)
         {
             for (int i = 0; i < newFish; i++)
@@ -132,7 +194,7 @@ public class GameLogic : MonoBehaviour {
         Animation ani = camRails.GetComponent<Animation>();
         ani.Rewind();
         ani.Stop();
-        
+
         camRails.transform.position = Vector3.zero;
         UpdateArrowAnimation();
         pauseTimer = false;
@@ -149,7 +211,7 @@ public class GameLogic : MonoBehaviour {
         ani.Play();
     }
 
-    void UpdateArrowAnimation()
+    public void UpdateArrowAnimation()
     {
         arrowLeft.SetActive(false);
         arrowForward.SetActive(false);
@@ -188,6 +250,8 @@ public class GameLogic : MonoBehaviour {
         }
     }
 
+    int userid = 0;
+
 	// Update is called once per frame
 	void Update () {
         if (pauseTimer)
@@ -195,22 +259,25 @@ public class GameLogic : MonoBehaviour {
             return;
         }
 
+        
         if (offlineMode)
         {
-            if (Input.GetAxis("Horizontal") > 0)
+            userid++;
+            string option = ":user"+userid+ "!user" + userid + "@user" + userid + ".tmi.twitch.tv PRIVMSG #breandev :";
+            if (Input.GetKeyUp(KeyCode.RightArrow))
             {
-                direction = Direction.Right;
-                UpdateArrowAnimation();
+                option += Direction.Right.ToString().ToLower();
+                bot.OnChatMsgRecieved(option);
             }
-            else if (Input.GetAxis("Horizontal") < 0)
+            else if (Input.GetKeyUp(KeyCode.LeftArrow))
             {
-                direction = Direction.Left;
-                UpdateArrowAnimation();
+                option += Direction.Left.ToString().ToLower();
+                bot.OnChatMsgRecieved(option);
             }
-            else if (Input.GetAxis("Vertical") > 0)
+            else if (Input.GetKeyUp(KeyCode.UpArrow))
             {
-                direction = Direction.Forward;
-                UpdateArrowAnimation();
+                option += Direction.Forward.ToString().ToLower();
+                bot.OnChatMsgRecieved(option);
             }
         }
 

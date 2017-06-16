@@ -53,7 +53,6 @@ public class TwitchIRC : MonoBehaviour
                 continue;
 
             buffer = input.ReadLine();
-            Debug.Log("IRC:" + buffer);
 
             //was message?
             if (buffer.Contains("PRIVMSG #"))

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-class Fish
+public class Fish
 {
     public GameObject gameObject;
     public string name = "";
@@ -13,18 +13,26 @@ public class SwarmLogic : MonoBehaviour {
     [Tooltip("prefab of a single fish")]
     public GameObject fishPrefab;
 
-    [Tooltip("Twitch bot instance to get random names for fish")]
-    public TwitchBot bot;
+    [Tooltip("size of area where new fish can spawn")]
+    public Vector3 spawnAreaSize = new Vector3(3.0f, 1.0f, 3.0f);
 
-    List<Fish> allFish = new List<Fish>();
+    [Tooltip("distance from spawn-area to center of game object")]
+    public Vector3 spawnAreaOffset = Vector3.zero;
+
+    [Tooltip("min. size of your swarm at the beginning")]
+    public int startWith = 0;
+
+    public List<Fish> allFish = new List<Fish>();
 
     public void addFish()
     {
         Fish fish = new Fish();
         fish.gameObject = Instantiate(fishPrefab);
         Vector3 pos = Random.insideUnitSphere;
-        pos.x *= 3f;
-        pos.z *= 3f;
+        pos.x *= spawnAreaSize.x;
+        pos.y *= spawnAreaSize.y;
+        pos.z *= spawnAreaSize.z;
+        pos += spawnAreaOffset;
         fish.gameObject.transform.SetParent(transform);
         fish.gameObject.transform.localPosition = pos;
         Animator ani = fish.gameObject.GetComponent<Animator>();
@@ -34,30 +42,19 @@ public class SwarmLogic : MonoBehaviour {
 
     public void removeFish()
     {
-        Fish fish = allFish[0];
-        Destroy(fish.gameObject);
-        allFish.RemoveAt(0);
+        if (allFish.Count > 0)
+        {
+            Fish fish = allFish[0];
+            Destroy(fish.gameObject);
+            allFish.RemoveAt(0);
+        }
     }
 
-	// Use this for initialization
-	void Start () {
-        // we will always have at least 10 fish
-        for (int i = allFish.Count; i < 10; i++)
+    public void Start()
+    {
+        for (int i = allFish.Count; i < startWith; i++)
         {
             addFish();
         }
     }
-	
-	// Update is called once per frame
-	void Update () {
-        if (allFish.Count < 5)
-        {
-            //TODO: GameOver
-        }
-		/*if (Time.realtimeSinceStartup > nextTime)
-        {
-            addFish();
-            Start();
-        }*/
-	}
 }

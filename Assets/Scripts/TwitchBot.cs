@@ -28,7 +28,7 @@ public class TwitchBot : MonoBehaviour {
         count.Add(Direction.Right, 0);
     }
 
-    void OnChatMsgRecieved(string msg)
+    public void OnChatMsgRecieved(string msg)
     {
         if (gameLogic.pauseTimer)
         {
@@ -82,6 +82,7 @@ public class TwitchBot : MonoBehaviour {
                 max = pair.Value;
             }
         }
+        gameLogic.UpdateArrowAnimation();
     }
 
     // Use this for initialization
