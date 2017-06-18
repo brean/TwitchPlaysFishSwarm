@@ -1,16 +1,18 @@
 Twitch Plays Swarm
 ==================
 Programming: Andreas Bresser
+
 Graphics: Martin Schemmel
 
 About the game
 --------------
-This game was developed as serious game during the Ocean Game Jam 2017 in Cologne.
+This game was developed as serious game during the [Ocean Game Jam 2017](http://www.oceangamejam.de/) in Cologne using Unity 3D; Modelling and animation in Blender.
 
-The idea behind is that a "swarm" of online users has the power to control a simulated swarm of fish. 
+The idea behind it is that a "swarm" of online users has the power to control a simulated swarm of fish. 
 
 The users can democratically decide where the swarm is heading. 
 After a timer has count down the swarm goes where most user wants it to go. 
+
 This lets the swarm either grow 
 (when the water quality is good and there is nothing else disturbing the fish) 
 or shrink 
