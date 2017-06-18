@@ -16,6 +16,16 @@ This lets the swarm either grow
 or shrink 
 (when the water quality is bad and/or there are dangers for the swarm like fishing boats).
 
+Screenshots
+-----------
+![Screenshot 1](screenshots/screen1.png?raw=true "Screenshot 1")
+
+![Screenshot 2](screenshots/screen2.png?raw=true "Screenshot 2")
+
+![Screenshot 3](screenshots/screen3.png?raw=true "Screenshot 3")
+
+![Screenshot 4](screenshots/screen4.png?raw=true "Screenshot 4")
+
 Configure Local/Offline
 -----------------------
 You can play this game offline. This is the default so you can play.
