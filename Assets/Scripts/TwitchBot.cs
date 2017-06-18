@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Text.RegularExpressions;
-
+using UnityEngine.UI;
 
 class Player {
     string name;
@@ -12,7 +12,7 @@ class Player {
 [RequireComponent(typeof(TwitchIRC))]
 public class TwitchBot : MonoBehaviour {
     private string cmdPattern = @"^\:(?<name1>[\w\d]*)\!(?<name2>[\w\d]*)\@(?<name3>[\w\d\.]*)\ PRIVMSG\ \#(?<chat>[\w\d]*)\ \:(?<cmd>[\w\d]*)$";
-
+    public Text chatActions;
     private TwitchIRC IRC;
     public GameLogic gameLogic;
 
@@ -21,6 +21,7 @@ public class TwitchBot : MonoBehaviour {
 
     public void ResetRound()
     {
+        chatActions.text = "";
         user = new Dictionary<string, Direction>();
         count = new Dictionary<Direction, int>();
         count.Add(Direction.Forward, 0);
@@ -82,6 +83,8 @@ public class TwitchBot : MonoBehaviour {
                 max = pair.Value;
             }
         }
+
+        chatActions.text = username + " voted " + dir.ToString() + "\n" + chatActions.text;
         gameLogic.UpdateArrowAnimation();
     }
 

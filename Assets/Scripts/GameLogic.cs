@@ -250,7 +250,7 @@ public class GameLogic : MonoBehaviour {
         }
     }
 
-    int userid = 0;
+    int userid = 1;
 
 	// Update is called once per frame
 	void Update () {
@@ -262,22 +262,24 @@ public class GameLogic : MonoBehaviour {
         
         if (offlineMode)
         {
-            userid++;
             string option = ":user"+userid+ "!user" + userid + "@user" + userid + ".tmi.twitch.tv PRIVMSG #breandev :";
             if (Input.GetKeyUp(KeyCode.RightArrow))
             {
                 option += Direction.Right.ToString().ToLower();
                 bot.OnChatMsgRecieved(option);
+                userid++;
             }
             else if (Input.GetKeyUp(KeyCode.LeftArrow))
             {
                 option += Direction.Left.ToString().ToLower();
                 bot.OnChatMsgRecieved(option);
+                userid++;
             }
             else if (Input.GetKeyUp(KeyCode.UpArrow))
             {
                 option += Direction.Forward.ToString().ToLower();
                 bot.OnChatMsgRecieved(option);
+                userid++;
             }
         }
 
